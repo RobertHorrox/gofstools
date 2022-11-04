@@ -17,6 +17,8 @@ package utils_test
 import (
 	"testing"
 
+	"github.com/RobertHorrox/gofstools/internal/test"
+
 	"github.com/RobertHorrox/gofstools/utils"
 
 	"github.com/stretchr/testify/assert"
@@ -25,7 +27,7 @@ import (
 func TestSeqExpansion(t *testing.T) {
 	t.Parallel()
 
-	sequences := []ExpansionTest{
+	sequences := []test.ExpansionTest{
 		{
 			Pattern: "1..5", Expected: []string{"1", "2", "3", "4", "5"},
 		},
