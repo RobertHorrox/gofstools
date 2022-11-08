@@ -15,11 +15,12 @@
 package utils
 
 import (
-	"errors"
 	"fmt"
 	"strconv"
 	"strings"
 	"unicode/utf8"
+
+	"github.com/cockroachdb/errors"
 
 	"github.com/RobertHorrox/gofstools/internal/utils"
 )
@@ -28,34 +29,65 @@ const (
 	PatternSplitLengthBase = 2
 	PatternSplitLengthIncr = 3
 	RuneLength             = 1
+	RuneBitSize            = 32
 )
 
-var (
-	ErrParsingIncr    = errors.New("cannot decode increment")
-	ErrInvalidPattern = errors.New("invalid pattern format")
-)
+var ErrInvalidPattern = errors.New("invalid pattern format")
 
-func parsePattern(pattern string) (string, string, int, error) {
+func decodeParameter(param string, isRune bool) (int32, error) {
+	var err error
+
+	var parsedParameter int32
+
+	if isRune {
+		parsedParameter, _ = utf8.DecodeRuneInString(param)
+		if parsedParameter == utf8.RuneError {
+			err = errors.Wrapf(ErrInvalidPattern, "Cannot decode rune %s", param)
+		}
+	} else {
+		param64, parseErr := strconv.ParseInt(param, 10, RuneBitSize)
+		parsedParameter = int32(param64)
+		err = parseErr
+	}
+
+	return parsedParameter, err
+}
+
+func expandIntSeq(start int32, end int32, incr int32) []int32 {
+	// If incr is negative then i will decrement, check i >= endInt
+	// If incr is positive then i will increment, check i <= endInt
+	var retVal []int32
+	for i := start; (incr < 0 && i >= end) || (incr > 0 && i <= end); i += incr {
+		retVal = append(retVal, i)
+	}
+
+	return retVal
+}
+
+func parsePattern(pattern string) (string, string, int32, error) {
 	elements := strings.Split(pattern, "..")
 	start := elements[0]
 	end := elements[1]
-	incr := 1
 
-	var err error
+	var incr int32 = 1
+
+	var retErr error
 
 	switch len(elements) {
 	case PatternSplitLengthBase: // Base case
 		break
 	case PatternSplitLengthIncr: // Case with increment detected
-		incr, err = strconv.Atoi(elements[2])
+		incr64, err := strconv.ParseInt(elements[2], 10, RuneBitSize)
 		if err != nil {
-			err = ErrParsingIncr
+			retErr = errors.Wrap(err, "Error Parsing Increment")
 		}
+
+		incr = int32(incr64) // We can downsize to int32 since RuneBitSize is 32 bits
 	default: // Invalid pattern
-		err = ErrInvalidPattern
+		retErr = ErrInvalidPattern
 	}
 
-	return start, end, incr, err
+	return start, end, incr, retErr
 }
 
 func getZeroPadLength(value string) int {
@@ -74,34 +106,35 @@ func ExpandSeq(pattern string) ([]string, error) {
 	}
 
 	// First check for runes
-	var retVal []string
+	isRuneSeq := len(start) == RuneLength && len(end) == RuneLength
 
-	if len(start) == RuneLength && len(end) == RuneLength {
-		startRune, _ := utf8.DecodeRuneInString(start)
-		endRune, _ := utf8.DecodeRuneInString(end)
-
-		for i := startRune; i <= endRune; i += rune(incr) {
-			retVal = append(retVal, string(i))
-		}
-
-		return retVal, nil
+	// Decoded Params
+	startDecoded, err := decodeParameter(start, isRuneSeq)
+	if err != nil {
+		return nil, err
 	}
 
-	// Check for integers
-	startInt, startErr := strconv.Atoi(start)
-	endInt, endErr := strconv.Atoi(end)
-
-	if startErr != nil || endErr != nil {
-		return retVal, ErrInvalidPattern
+	endDecoded, err := decodeParameter(end, isRuneSeq)
+	if err != nil {
+		return nil, err
 	}
 
-	// Check for zero padding
-	paddingLength := utils.IntMax(getZeroPadLength(start), getZeroPadLength(end))
-	fmtStr := "%0" + strconv.Itoa(paddingLength) + "d"
+	// Get Sequence
+	intSeq := expandIntSeq(startDecoded, endDecoded, incr)
 
-	for i := startInt; i <= endInt; i += incr {
-		retVal = append(retVal, fmt.Sprintf(fmtStr, i))
+	fmtString := ""
+	if isRuneSeq { // Rune Seq, just cast the ints to characters in sprintf
+		fmtString = "%c"
+	} else { // If not a rune seq then it's an Integer seq with a possible padding
+		// Check for zero padding
+		paddingLength := utils.IntMax(getZeroPadLength(start), getZeroPadLength(end))
+		fmtString = "%0" + strconv.Itoa(paddingLength) + "d"
 	}
 
-	return retVal, nil
+	outputSeq := make([]string, len(intSeq))
+	for i, v := range intSeq {
+		outputSeq[i] = fmt.Sprintf(fmtString, v)
+	}
+
+	return outputSeq, nil
 }
