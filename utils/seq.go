@@ -26,7 +26,6 @@ import (
 )
 
 const (
-	PatternSplitLengthBase = 2
 	PatternSplitLengthIncr = 3
 	RuneLength             = 1
 	RuneBitSize            = 32
@@ -73,17 +72,16 @@ func parsePattern(pattern string) (string, string, int32, error) {
 
 	var retErr error
 
-	switch len(elements) {
-	case PatternSplitLengthBase: // Base case
-		break
-	case PatternSplitLengthIncr: // Case with increment detected
+	if len(elements) == PatternSplitLengthIncr {
+		// Increment detected
 		incr64, err := strconv.ParseInt(elements[2], 10, RuneBitSize)
 		if err != nil {
 			retErr = errors.Wrap(err, "Error Parsing Increment")
 		}
 
 		incr = int32(incr64) // We can downsize to int32 since RuneBitSize is 32 bits
-	default: // Invalid pattern
+	} else {
+		// Invalid pattern
 		retErr = ErrInvalidPattern
 	}
 
