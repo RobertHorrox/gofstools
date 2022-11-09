@@ -3,6 +3,8 @@
 package main
 
 import (
+	"fmt"
+
 	"github.com/magefile/mage/sh"
 )
 
@@ -13,4 +15,9 @@ func Lint() error {
 
 func Fmt() error {
 	return sh.Run("gofumpt", "-w", "-l", ".")
+}
+
+func Hello() error {
+	fmt.Println("Hello")
+	return nil
 }
