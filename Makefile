@@ -16,7 +16,7 @@ build:
 
 test:
 	@mkdir reports
-	@gotestsum --format testname --junitfile ./reports/unit-tests.xml --jsonfile ./reports/unit-tests.json -- -coverprofile=cover.out ./...
+	@gotestsum --format testname --junitfile ./reports/unit-tests.xml --jsonfile ./reports/unit-tests.json -- -coverprofile=./reports/cover.out ./...
 	@go tool cover -func=./reports/cover.out
 
 sonar:
