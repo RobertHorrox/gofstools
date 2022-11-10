@@ -11,11 +11,44 @@ jobs:
     runs-on: ubuntu-latest
     steps:
     - uses: actions/checkout@v3
-      with:
-        fetch-depth: 0  # Shallow clones should be disabled for a better relevancy of analysis
     - name: Setup Go
       uses: actions/setup-go@v3
       with:
         go-version: '1.19'
-    - run: go get github.com/magefile/mage
-    - run: mage hello
+    - run: make deps
+    - run: make test
+    - name: Test Summary
+      uses: test-summary/action@v2
+      with:
+        paths: "./reports/unit-tests.xml"
+      if: always()
+    - name: Upload test summary
+      uses: actions/upload-artifact@v3
+      with:
+        name: test-summary
+        path: test-summary.md
+      if: always()
+    - name: Archive code coverage results
+      uses: actions/upload-artifact@v3
+      with:
+        name: test-reports
+        path: reports
+
+  sonarCloudTrigger:
+    needs: test
+    name: SonarCloud Trigger
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v3
+      with:
+        fetch-depth: 0  # Shallow clones should be disabled for a better relevancy of analysis
+    - name: Download code coverage results
+      uses: actions/download-artifact@v3
+      with:
+        name: test-reports
+        path: reports
+    - name: Analyze with SonarCloud
+      uses: sonarsource/sonarcloud-github-action@master
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
