@@ -26,6 +26,7 @@ import (
 )
 
 const (
+	patternSplitLength     = 2
 	patternSplitLengthIncr = 3
 	runeLength             = 1
 	runeBitSize            = 32
@@ -132,7 +133,7 @@ func parsePattern(pattern string) (string, string, int32, error) {
 		}
 
 		incr = int32(incr64) // We can downsize to int32 since RuneBitSize is 32 bits
-	} else {
+	} else if len(elements) != patternSplitLength {
 		// Invalid pattern
 		retErr = ErrInvalidPattern
 	}
