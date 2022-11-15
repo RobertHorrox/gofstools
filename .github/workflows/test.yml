@@ -23,6 +23,7 @@ jobs:
       with:
         show: all
         paths: "reports/*.xml"
+        output: "test-summary.md"
       if: always()
     - run: ls -l **/*
     - name: Upload test summary
