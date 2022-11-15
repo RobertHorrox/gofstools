@@ -21,6 +21,7 @@ jobs:
     - name: Test Summary
       uses: test-summary/action@v2
       with:
+        show: all
         paths: "reports/*.xml"
       if: always()
     - run: ls -l **/*
