@@ -21,7 +21,7 @@ jobs:
     - name: Test Summary
       uses: test-summary/action@v2
       with:
-        paths: "./reports/unit-tests.xml"
+        paths: "reports/*.xml"
       if: always()
     - run: ls -l **/*
     - name: Upload test summary
