@@ -15,3 +15,10 @@ coverage.txt
 
 # Dependency directories (remove the comment below to include it)
 # vendor/
+
+# ignore build harness
+.build-harness
+build-harness
+
+# ignore scanner source
+.scannerwork

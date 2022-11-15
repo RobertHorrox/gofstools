@@ -1,0 +1,61 @@
+name: Test
+on:
+  push:
+    branches:
+    - main
+  pull_request:
+    types: [opened, synchronize, reopened]
+jobs:
+  test:
+    name: Test
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v3
+    - name: Setup Go
+      uses: actions/setup-go@v3
+      with:
+        go-version: '1.19'
+    - run: make deps
+    - run: make test
+    - name: Test Summary
+      uses: test-summary/action@v2
+      with:
+        show: all
+        paths: "reports/*.xml"
+        output: "test-summary.md"
+      if: always()
+    - uses: actions/github-script@v6
+      with:
+        script: |
+          const fs = require("fs");
+          const buffer = fs.readFileSync("test-summary.md");
+          github.rest.issues.createComment({
+            issue_number: context.issue.number,
+            owner: context.repo.owner,
+            repo: context.repo.repo,
+            body: buffer.toString()
+          });
+    - name: Archive code coverage results
+      uses: actions/upload-artifact@v3
+      with:
+        name: test-reports
+        path: reports
+
+  sonarCloudTrigger:
+    needs: test
+    name: SonarCloud Trigger
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v3
+      with:
+        fetch-depth: 0  # Shallow clones should be disabled for a better relevancy of analysis
+    - name: Download code coverage results
+      uses: actions/download-artifact@v3
+      with:
+        name: test-reports
+        path: reports
+    - name: Analyze with SonarCloud
+      uses: sonarsource/sonarcloud-github-action@master
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
