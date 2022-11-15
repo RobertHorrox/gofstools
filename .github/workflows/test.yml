@@ -17,6 +17,7 @@ jobs:
         go-version: '1.19'
     - run: make deps
     - run: make test
+    - run: ls -l **/*
     - name: Test Summary
       uses: test-summary/action@v2
       with:
