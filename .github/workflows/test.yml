@@ -17,7 +17,6 @@ jobs:
         go-version: '1.19'
     - run: make deps
     - run: make test
-    - run: ls -l **/*
     - name: Test Summary
       uses: test-summary/action@v2
       with:
@@ -25,13 +24,17 @@ jobs:
         paths: "reports/*.xml"
         output: "test-summary.md"
       if: always()
-    - run: ls -l **/*
-    - name: Upload test summary
-      uses: actions/upload-artifact@v3
+    - uses: actions/github-script@v6
       with:
-        name: test-summary
-        path: test-summary.md
-      if: always()
+        script: |
+          const fs = require("fs");
+          const buffer = fs.readFileSync("test-summary.md");
+          github.rest.issues.createComment({
+            issue_number: context.issue.number,
+            owner: context.repo.owner,
+            repo: context.repo.repo,
+            body: buffer.toString()
+          });
     - name: Archive code coverage results
       uses: actions/upload-artifact@v3
       with:
