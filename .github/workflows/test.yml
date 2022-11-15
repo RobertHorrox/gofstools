@@ -23,6 +23,7 @@ jobs:
       with:
         paths: "./reports/unit-tests.xml"
       if: always()
+    - run: ls -l **/*
     - name: Upload test summary
       uses: actions/upload-artifact@v3
       with:
